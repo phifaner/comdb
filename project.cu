@@ -70,10 +70,12 @@ int* proj_points(int mbase, int dim, size_t length, int wsize, thrust::device_ve
 
 	int *host_hash_table;
   	host_hash_table = (int*) malloc(sizeof(int)*mbase*length/wsize);
-	cudaMemcpy(host_hash_table, p_device_hash_table, mbase*length/wsize, cudaMemcpyDeviceToHost);
+	thrust::copy(device_hash_table.begin(), device_hash_table.end(), host_hash_table);
 
-	//std::cout << "--------------------------" << host_hash_table[100] << std::endl;
-
+	/*std::cout << "mbase:" << mbase << " length: " << length << "wsize: " << wsize << std::endl;
+	for (int i = 0; i < mbase*length/wsize; i++)
+		if (i == 199+ 200*125) std::cout <<  host_hash_table[i] << "\t";
+	*/
 	return host_hash_table;
 }
 
@@ -81,7 +83,7 @@ void to_inv_list(GPUGenie::GPUGenie_Config& config, GPUGenie::inv_table *table, 
 	GPUGenie::inv_list list;
 	int i, j;
 	
-	//std::cout << "-----------------------" << std::endl;
+	//std::cout << "----data size: ------" << data_size << std::endl;
 	for (i = 0; i < dim; i++)
 	{
 		std::vector<int> col;
@@ -91,8 +93,9 @@ void to_inv_list(GPUGenie::GPUGenie_Config& config, GPUGenie::inv_table *table, 
 		{
 			col.push_back(hash_data[j*dim+i]);
 			
-			//std::cout << j*dim+i] << "\t";
+			//std::cout << hash_data[j*dim+i] << "\t";
 		}
+		
 		//std::cout << "-----------------------" << std::endl;
 	
 		list.invert(col);

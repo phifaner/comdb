@@ -44,6 +44,14 @@ int load_data(const char* filename, comdb &db)
         return EXIT_FAILURE;
     }
 
+	//printf("file size: %ld, file id: %d, file name: %s\n", file_size, fd, filename);
+
+    if (file_size == 0) 
+    {
+	printf("%s file size 0 \n", filename);
+	return EXIT_FAILURE;
+    }
+
     p_mmap = (char*) mmap(0, file_size, PROT_READ, MAP_SHARED, fd, 0);
     
     if (p_mmap == MAP_FAILED)
@@ -77,7 +85,7 @@ int load_data(const char* filename, comdb &db)
 	//std::cout << "____-------__________________"  << std::endl; 	
 
     // initialize column vectors
-    thrust::device_vector<char> id_vec(cnt*4);
+    thrust::device_vector<char> id_vec(cnt*6);
     thrust::fill(id_vec.begin(), id_vec.end(), 0);
     thrust::device_vector<char> time_vec(cnt*19);
     thrust::fill(time_vec.begin(), time_vec.end(), 0);

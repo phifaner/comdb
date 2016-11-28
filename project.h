@@ -92,32 +92,12 @@ struct project
 			// put into the hash tables, a 1-dimension array, store tid
 			hash_table[t*func_num+i] = interval_id;
 			
-			//if (interval_id < 0)
+			//if (t == 125 && i == 199) printf("=========================%d\n", interval_id);
+			//printf("%d\t", interval_id);
+			//if (interval_id > 10000)
 			//	printf("============hash value: %d, hash a: %lf,  hash a 2: %lf, hash b: %lf \n", interval_id, win_lon_data[t*dimension], win_lat_data[t*dimension], hash_b_data[i]);
 
 		});
-		/*for (int i = 0; i < func_num; i++) {
-			value = 0;
-			interval_id = -1;
-
-			// Compute the inner product value of <a> * dataPoint.
-			for (int m = 0; m < dimension; m++) {
-				value += (hash_a_data[i*dimension+m] * win_lon_data[dimension*t+m]);	// add data of lontitude;
-				value += (hash_a_data[i*dimension+m] * win_lat_data[dimension*t+m]);
-			}
-
-			value += hash_b_data[i];
-			value /= w;
-
-			interval_id = (int)value;
-	
-			printf("============id: %d\n", t*func_num+i);
-		
-			// put into the hash tables, a 1-dimension array, store tid
-			hash_table[t*func_num+i] = interval_id;
-
-			//printf("============id: %d, %d\n", t*dimension+i, hash_table[t*dimension+i]);
-		}*/
 	}
 	
 };
