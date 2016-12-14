@@ -46,13 +46,15 @@ int load_data(const char* filename, comdb &db)
 
 	//printf("file size: %ld, file id: %d, file name: %s\n", file_size, fd, filename);
 
-    if (file_size == 0) 
+   /* if (file_size == 0) 
     {
-	printf("%s file size 0 \n", filename);
+	perror("file size");
+	//printf("%s file size 0 \n", filename);
 	return EXIT_FAILURE;
     }
-
-    p_mmap = (char*) mmap(0, file_size, PROT_READ, MAP_SHARED, fd, 0);
+*/
+    if (file_size > 0)
+	    p_mmap = (char*) mmap(0, file_size, PROT_READ, MAP_SHARED, fd, 0);
     
     if (p_mmap == MAP_FAILED)
     {
@@ -82,17 +84,15 @@ int load_data(const char* filename, comdb &db)
             thrust::make_counting_iterator((unsigned int) file_size),
             dev.begin(), line_index.begin()+1, is_break());
 
-	//std::cout << "____-------__________________"  << std::endl; 	
-
     // initialize column vectors
-    thrust::device_vector<char> id_vec(cnt*6);
-    thrust::fill(id_vec.begin(), id_vec.end(), 0);
-    thrust::device_vector<char> time_vec(cnt*19);
-    thrust::fill(time_vec.begin(), time_vec.end(), 0);
-    thrust::device_vector<char> longitude_vec(cnt*9);
-    thrust::fill(longitude_vec.begin(), longitude_vec.end(), 0);
-    thrust::device_vector<char> latitude_vec(cnt*8);
-    thrust::fill(latitude_vec.begin(), latitude_vec.end(), 0);
+    thrust::device_vector<char> id_vec(cnt*6, 0);
+    //thrust::fill(id_vec.begin(), id_vec.end(), 0);
+    thrust::device_vector<char> time_vec(cnt*19, 0);
+    //thrust::fill(time_vec.begin(), time_vec.end(), 0);
+    thrust::device_vector<char> longitude_vec(cnt*9, 0);
+    //thrust::fill(longitude_vec.begin(), longitude_vec.end(), 0);
+    thrust::device_vector<char> latitude_vec(cnt*8, 0);
+    //thrust::fill(latitude_vec.begin(), latitude_vec.end(), 0);
 
     thrust::device_vector<char*> dest(4);
     dest[0] = thrust::raw_pointer_cast(id_vec.data());
@@ -107,7 +107,6 @@ int load_data(const char* filename, comdb &db)
     dest_len[2] = 9;
     dest_len[3] = 8;
 
- 
     // set index for each column, default 4 columns
     thrust::device_vector<unsigned int> index(4);
     thrust::sequence(index.begin(), index.end());
@@ -157,7 +156,7 @@ int load_data(const char* filename, comdb &db)
     //res_lat_vec.resize(res_lat_vec.size() + cnt);
 
     // parse id column
-    index_cnt[0] = 4;
+    index_cnt[0] = 6;
     gpu_atoi atoi_ff((const char*) thrust::raw_pointer_cast(id_vec.data()), (int*)thrust::raw_pointer_cast(_id_vec.data()),
 			thrust::raw_pointer_cast(index_cnt.data()));
     thrust::for_each(begin, begin+cnt, atoi_ff);
@@ -190,7 +189,7 @@ int load_data(const char* filename, comdb &db)
     db.size = db.col_id_vec.size();
     // print id column 
     //thrust::copy(db.col_lat_vec.begin(), db.col_lat_vec.end(), std::ostream_iterator<double>(std::cout, ","));
-    //thrust::copy(_lon_vec.begin(), _lon_vec.end(), std::ostream_iterator<double>(std::cout, ","));
+    //thrust::copy(_id_vec.begin(), _id_vec.end(), std::ostream_iterator<int>(std::cout, ","));
 
     return 0;
 }
