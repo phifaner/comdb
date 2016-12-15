@@ -4,7 +4,7 @@
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
 
-#include "GPUGenie.h"
+#include "GPUGenie/src/GPUGenie.h"
 
 // A simple point in d-dimensional space. A point is defined by a
 // vector of coordinates.

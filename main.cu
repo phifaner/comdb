@@ -9,7 +9,7 @@
 #include "comdb.h"
 #include "swindow.h"
 #include "project.h"
-#include "GPUGenie.h"
+#include "GPUGenie/src/GPUGenie.h"
 
 using namespace std;
 

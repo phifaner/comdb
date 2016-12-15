@@ -43,38 +43,38 @@ libgenie.a : interface.o random.o heap_count.o inv_list.o inv_table.o knn.o matc
 
 #alenka objects
 nvcc = nvcc $(CFLAGS) $(GENCODE_FLAGS)
-main.o : main.cu swindow.h GPUGenie.h 
-	$(nvcc) -c $< -o $@
+main.o : main.cu swindow.h GPUGenie/src/GPUGenie.h 
+	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
 comdb.o : comdb.cu
-	$(nvcc) -c $< -o $@
+	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
 #heatmap.o : heatmap.cu
 #	$(nvcc) -c $< -o $@
 #swindow.o : swindow.cu swindow.h
 #	$(nvcc) -c $< -o $@
 project.o : project.cu Random.h
-	$(nvcc) -c $< -o $@
+	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
 random.o : Random.cpp Random.h
-	gcc -c $< -o $@
-interface.o : GPUGenie/interface.cu GPUGenie/interface.h
-	$(nvcc) -c $< -o $@
-heap_count.o : GPUGenie/heap_count.cu GPUGenie/heap_count.h
-	$(nvcc) -c $< -o $@
-inv_list.o : GPUGenie/inv_list.cu GPUGenie/inv_list.h
-	$(nvcc) -c $< -o $@
-inv_table.o : GPUGenie/inv_table.cu GPUGenie/inv_table.h
-	$(nvcc) -c $< -o $@
-knn.o : GPUGenie/knn.cu GPUGenie/knn.h
-	$(nvcc) -c $< -o $@
-match.o : GPUGenie/match.cu GPUGenie/match.h
-	$(nvcc) -c $< -o $@
-query.o : GPUGenie/query.cu GPUGenie/query.h
-	$(nvcc) -c $< -o $@
-genie_errors.o : GPUGenie/genie_errors.cu GPUGenie/genie_errors.h
-	$(nvcc) -c $< -o $@
-timing.o : GPUGenie/Timing.cc GPUGenie/Timing.h
-	gcc -c $< -o $@
-logger.o : GPUGenie/Logger.cc GPUGenie/Logger.h
-	gcc -c $< -o $@
+	gcc -c $< -o $@ -IGPUGenie -IGPUGenie/src
+interface.o : GPUGenie/src/GPUGenie/interface.cu GPUGenie/src/GPUGenie/interface.h
+	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
+heap_count.o : GPUGenie/src/GPUGenie/heap_count.cu GPUGenie/src/GPUGenie/heap_count.h
+	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
+inv_list.o : GPUGenie/src/GPUGenie/inv_list.cu GPUGenie/src/GPUGenie/inv_list.h
+	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
+inv_table.o : GPUGenie/src/GPUGenie/inv_table.cu GPUGenie/src/GPUGenie/inv_table.h
+	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
+knn.o : GPUGenie/src/GPUGenie/knn.cu GPUGenie/src/GPUGenie/knn.h
+	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
+match.o : GPUGenie/src/GPUGenie/match.cu GPUGenie/src/GPUGenie/match.h
+	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
+query.o : GPUGenie/src/GPUGenie/query.cu GPUGenie/src/GPUGenie/query.h
+	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
+genie_errors.o : GPUGenie/src/GPUGenie/genie_errors.cu GPUGenie/src/GPUGenie/genie_errors.h
+	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
+timing.o : GPUGenie/src/GPUGenie/Timing.cc GPUGenie/src/GPUGenie/Timing.h
+	gcc -c $< -o $@ -IGPUGenie -IGPUGenie/src
+logger.o : GPUGenie/src/GPUGenie/Logger.cc GPUGenie/src/GPUGenie/Logger.h
+	gcc -c $< -o $@ -IGPUGenie -IGPUGenie/src
 #bison / flex generation
 #alenka.cu alenka.hu: alenka.ypp
 #	bison -d -o $@ $<
