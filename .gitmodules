@@ -1,0 +1,3 @@
+[submodule "GPUGenie"]
+	path = GPUGenie
+	url = git@github.com:SeSaMe-NUS/GPUGenie.git
