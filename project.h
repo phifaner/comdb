@@ -4,7 +4,7 @@
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
 
-#include "GPUGenie/src/GPUGenie.h"
+#include "GPUGenie.h"
 
 // A simple point in d-dimensional space. A point is defined by a
 // vector of coordinates.
@@ -28,8 +28,10 @@ typedef struct _HashFunction {
 
 void init_hash_function(int mbase, int dim, /*double max_coord, double c, double w*/ double radius);
 
-void proj_points(int mbase, int dim, size_t length, int wsize, int* host_hash_data, thrust::device_vector<int> &win_id_vec, 
-	thrust::device_vector<double> &win_lon_vec, thrust::device_vector<double> &win_lat_vec, 
+void proj_points(int mbase, int dim, size_t length, int wsize, int* host_hash_data, int *host_id_data,
+		thrust::device_vector<int> &win_id_vec, 
+		thrust::device_vector<double> &win_lon_vec, 
+		thrust::device_vector<double> &win_lat_vec, 
 		double min_lon, double max_lon, double min_lat, double max_lat, double w);
 
 void to_inv_list(GPUGenie::GPUGenie_Config& config, GPUGenie::inv_table *table, int *hash_data, int data_size, int dim);
@@ -47,24 +49,25 @@ struct project
 	int func_num, dimension;
 	double min_lon, max_lon, min_lat, max_lat;
 	int *hash_table;
-	//int *hash_id_data;	// to store the trajectory id for the knn search
+	int *hash_id_data;	// to store the trajectory id for the knn search
 	int *win_id_data;
 	double *win_lon_data, *win_lat_data;
 	double w;
 
-	project(double *_a_data, double *_b_data, int _func_num, int _dimension, int *_hash_table,  
+	project(double *_a_data, double *_b_data, int _func_num, int _dimension, int *_hash_table, int *_h_id_data, 
 		size_t _len, int *id_data, double *lon_data, double *lat_data, double _min_lon, 
 		double _max_lon, double _min_lat, double _max_lat, double _w) 
 		: hash_a_data(_a_data), hash_b_data(_b_data), func_num(_func_num), dimension(_dimension), 
 			hash_table(_hash_table), length(_len), win_id_data(id_data), win_lon_data(lon_data), 
 				win_lat_data(lat_data), min_lon(_min_lon), max_lon(_max_lon), min_lat(_min_lat),
-					max_lat(_max_lat), w(_w) {}
+					max_lat(_max_lat), w(_w), hash_id_data(_h_id_data) {}
 
 	//template <typename T>
 	__host__ __device__
 	void operator()(const int t)
 	{
 		int wsize = dimension/2; // or 4
+
 		// the first id is same as the last id
 		if (win_id_data[wsize*t] != win_id_data[wsize*t+wsize])	return;
 
@@ -95,7 +98,7 @@ struct project
 	
 			// put into the hash tables, a 1-dimension array, store tid
 			hash_table[t*func_num+i] = interval_id;
-			//hash_id_data[t*func_num+i] = win_id_data[dimension*t];
+			hash_id_data[t*func_num+i] = win_id_data[wsize*t];
 			
 			if (interval_id > 10000 || interval_id < -10000)
 			{

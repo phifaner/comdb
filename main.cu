@@ -9,7 +9,7 @@
 #include "comdb.h"
 #include "swindow.h"
 #include "project.h"
-#include "GPUGenie/src/GPUGenie.h"
+#include "GPUGenie.h"
 
 using namespace std;
 
@@ -34,7 +34,7 @@ int main()
 	DIR *dir;
 	struct dirent *ent;
 	char path[50];
-	const char *data_path = "./data_old";
+	const char *data_path = "./data";
 
 	if ((dir = opendir(data_path)) != NULL)
 	{
@@ -156,7 +156,7 @@ int main()
 	auto ptr_min_lat = thrust::min_element(db.col_lat_vec.begin(), db.col_lat_vec.end());
 
 	// set preprocessing parameters
-	int *hash_data = NULL;
+	int *hash_data = NULL, *id_data = NULL;
 	int mbase = 200;			// number of hash functions
 	int wsize = 8;				// sliding window size 		
 	int dimension = 2*wsize;		// data dimension
@@ -167,9 +167,9 @@ int main()
 	//init_hash_function(mbase, dimension, max_coord, c, w);
 	init_hash_function(mbase, dimension, radius);
 	hash_data = (int*) malloc(sizeof(int)*mbase*length/wsize);
-	//id_data = (int*) malloc(sizeof(int)*mbase*length/wsize);
+	id_data = (int*) malloc(sizeof(int)*mbase*length/wsize);
 
-	proj_points(mbase, dimension, length, wsize, hash_data, win_id_vec, win_lon_vec, win_lat_vec, 
+	proj_points(mbase, dimension, length, wsize, hash_data, id_data, win_id_vec, win_lon_vec, win_lat_vec, 
 		*ptr_min_lon, *ptr_max_lon, *ptr_min_lat, *ptr_max_lat, w);
 
 	cudaEventRecord(end, 0);
@@ -216,25 +216,26 @@ int main()
 	
 	// prepare query input data
 	//GPUGenie::read_file(queries, "test.csv", config.num_of_queries);a
-	int num_query = 38400;
-	double lon_query[38400] = {	
-					116.35092,116.35046,116.34923,116.34722,116.33798,116.34026,116.35012,116.34129,
-					116.35092,116.34962,116.31765,116.32353,116.33932,116.33706,116.33693,116.33583,
-					116.33637,116.33985,116.34076,116.34052,116.37568,116.37568,116.4129,116.41215,
-					116.41156,116.41119,116.40309,116.39041,116.38461,116.37348,116.36722,116.36708,
-					116.35092,116.34962,116.31765,116.32353,116.33932,116.33975,116.33706,116.33693,
-					116.33583,116.33637,116.33985,116.34076,116.34052,116.37568,116.37568,116.4129,
-					116.41215,116.41156,116.41119,116.40309,116.39041,116.38461,116.37348,116.36722,
-					116.35092,116.34962,116.31765,116.32353,116.33932,116.33975,116.33706,116.33693,
-					116.33583,116.33637,116.33985,116.34076,116.34052,116.37568,116.37568,116.4129,
-					116.41215,116.41156,116.41119,116.40309,116.39041,116.38461,116.37348,116.36722,
-					116.35092,116.34962,116.31765,116.32353,116.33932,116.33975,116.33706,116.33693,
-					116.33583,116.33637,116.33985,116.34076,116.34052,116.37568,116.37568,116.4129,
-					116.41215,116.41156,116.41119,116.40309,116.39041,116.38461,116.37348,116.36722,
-					116.35092,116.34962,116.31765,116.32353,116.33932,116.33975,116.33706,116.33693,
-					116.33583,116.33637,116.33985,116.34076,116.34052,116.37568,116.37568,116.4129,
-					116.41215,116.41156,116.41119,116.40309,116.39041,116.38461,116.37348,116.36722,
-					116.35092,116.34962,116.31765,116.32353,116.33932,116.33975,116.33706,116.33693,
+	int num_query = 4801*8;
+	double lon_query[4801*8] = {	
+				116.35092,116.34962,116.31765,116.32353,116.33932,116.33706,116.33693,116.33583,
+				116.35092,116.35046,116.34923,116.34722,116.33798,116.34026,116.35012,116.34129,
+				116.35092,116.34962,116.31765,116.32353,116.33932,116.33706,116.33693,116.33583,
+				116.33637,116.33985,116.34076,116.34052,116.37568,116.37568,116.4129,116.41215,
+				116.41156,116.41119,116.40309,116.39041,116.38461,116.37348,116.36722,116.36708,
+				116.35092,116.34962,116.31765,116.32353,116.33932,116.33975,116.33706,116.33693,
+				116.33583,116.33637,116.33985,116.34076,116.34052,116.37568,116.37568,116.4129,
+				116.41215,116.41156,116.41119,116.40309,116.39041,116.38461,116.37348,116.36722,
+				116.35092,116.34962,116.31765,116.32353,116.33932,116.33975,116.33706,116.33693,
+				116.33583,116.33637,116.33985,116.34076,116.34052,116.37568,116.37568,116.4129,
+				116.41215,116.41156,116.41119,116.40309,116.39041,116.38461,116.37348,116.36722,
+				116.35092,116.34962,116.31765,116.32353,116.33932,116.33975,116.33706,116.33693,
+				116.33583,116.33637,116.33985,116.34076,116.34052,116.37568,116.37568,116.4129,
+				116.41215,116.41156,116.41119,116.40309,116.39041,116.38461,116.37348,116.36722,
+				116.35092,116.34962,116.31765,116.32353,116.33932,116.33975,116.33706,116.33693,
+				116.33583,116.33637,116.33985,116.34076,116.34052,116.37568,116.37568,116.4129,
+				116.41215,116.41156,116.41119,116.40309,116.39041,116.38461,116.37348,116.36722,
+				116.35092,116.34962,116.31765,116.32353,116.33932,116.33975,116.33706,116.33693,
 					116.33583,116.33637,116.33985,116.34076,116.34052,116.37568,116.37568,116.4129,
 					116.41215,116.41156,116.41119,116.40309,116.39041,116.38461,116.37348,116.36722,
 					116.35092,116.34962,116.31765,116.32353,116.33932,116.33975,116.33706,116.33693,
@@ -5019,9 +5020,9 @@ int main()
 					116.33583,116.33637,116.33985,116.34076,116.34052,116.37568,116.37568,116.4129,
 					116.41215,116.41156,116.41119,116.40309,116.39041,116.38461,116.37348,116.36722
 
-
 			    };
-	double lat_query[38400] = {	
+	double lat_query[4801*8] = {	
+					39.63793,39.63555,39.64407,39.69038,39.72047,39.73823,39.76157,39.76158,
 					39.63821,39.64201,39.65023,39.66145,39.7021,39.71412,39.74226,39.80256,
 					39.63793,39.63555,39.64407,39.69038,39.72047,39.73823,39.76157,39.76158,
 					39.76861,39.78241,39.79948,39.84915,39.86949,39.86949,39.89116,39.90378,
@@ -9823,7 +9824,6 @@ int main()
 					39.76158,39.76861,39.78241,39.79948,39.84915,39.86949,39.86949,39.89116,
 					39.90378,39.91736,39.92837,39.93218,39.9321,39.92118,39.92994,39.92632
 
-
 			    };
 	
 	config.num_of_queries = num_query/wsize;
@@ -9833,7 +9833,8 @@ int main()
 	thrust::device_vector<double> query_lat_vec(lat_query, lat_query+num_query);
 	int *query_hash_data = (int *)malloc(sizeof(int)*mbase*num_query/wsize);
 	
-	proj_points(mbase, dimension, num_query, wsize, query_hash_data, query_id_vec, query_lon_vec, query_lat_vec, 
+	proj_points(mbase, dimension, num_query, wsize, query_hash_data, NULL, 
+		query_id_vec, query_lon_vec, query_lat_vec, 
 		*ptr_min_lon, *ptr_max_lon, *ptr_min_lat, *ptr_max_lat, w);
 	
 	for (int i = 0; i < config.num_of_queries; i++)
@@ -9852,24 +9853,27 @@ int main()
 	ofstream outfile("benchmark.txt");
 	for (int i = 0; i < result.size(); i++)	
 	{
-		int index = result[i]*wsize;		// here we multiply wsize because result[i] is the ith mapping point with mbase dimensions 
-		//cout << win_id_vec[result[i]*wsize] << "\t";	
+		int index_data = result[i]*wsize;		// here we multiply wsize because result[i] 
+								// is the ith mapping point with mbase dimensions 
+		int index_query = (i/config.num_of_topk)*wsize;
+
+		outfile << result[i] << "\t" << index_query << "\t";	
 		
-		outfile << win_id_vec[index] << "\t";
+		outfile << win_id_vec[index_data] << "\t";
 
 		// computing euclidian distance between queries and results
 		double distance = 0.0;
 		for (int j = 0; j < wsize; j++) 
 		{
-			double lon = win_lon_vec[index+j];
-			double lat = win_lat_vec[index+j];
-			distance += std::sqrt((lon-lon_query[j])*(lon-lon_query[j])+(lat-lat_query[j])*(lat-lat_query[j]));
+			double lon = win_lon_vec[index_data+j];
+			double lat = win_lat_vec[index_data+j];
+			distance += std::sqrt((lon-lon_query[index_query+j])*(lon-lon_query[index_query+j])
+					+(lat-lat_query[index_query+j])*(lat-lat_query[index_query+j]));
 			
-			//cout << lon << ":" << lon_query[j] << "; " << lat << ":" << lat_query[j] << ";\t"; 
+			//cout << lon << ":" << lon_query[index_query+j] << "; "; 
+			//cout << lat << ":" << lat_query[index_query+j] << ";\t"; 
 		}
 		distance /= wsize;
-
-		//cout << result[i] << "\t";
 
 		//cout << "distance: " << distance << "\n";
 
