@@ -4,29 +4,46 @@
 
 #include "trajectory.h"
 
+struct comdb;
+
 //size_t size;					 // table size
 //thrust::device_vector<float>    col_lat_vec;         // store trajectory column's values
 //thrust::device_vector<int>    	col_id_vec;          // store id values
 //thrust::device_vector<float>    res_lat_vec;     // store query result
 
+/* load multiple files by trajectory ids,
+ * len: length of list
+ */
+int load_data_by_ids(const unsigned long * id_list, int len, comdb *db);
+
+/* load only one file */
+int load_data(const char * filename, comdb * db);
+
 struct comdb
 {
-  //  thrust::device_vector<float>    col_lat_vec;         // store trajectory column's values
-   // thrust::device_vector<int>      col_id_vec;          // store id values
-    //thrust::device_vector<float>    res_lat_vec;     	 // store query result
-    thrust::device_vector<int>   col_id_vec;
-    thrust::device_vector<double> col_lat_vec;
-    thrust::device_vector<double> col_lon_vec;
-    thrust::device_vector<long> col_time_vec; 
-    thrust::device_vector<double> res_lat_vec;
-    thrust::device_vector<double> res_lon_vec;
-    thrust::device_vector<long> res_time_vec;
-    thrust::device_vector<int> res_id_vec;
+    // store trajectory column's values
+    thrust::device_vector<int>      col_id_vec;
+    thrust::device_vector<double>   col_lon_vec;
+    thrust::device_vector<double>   col_lat_vec;
+    thrust::device_vector<long>     col_time_vec;
+    thrust::device_vector<int>      col_state_vec;
+    thrust::device_vector<int>      col_speed_vec;
+    thrust::device_vector<int>      col_dir_vec;
+
+    // store query result
+    thrust::device_vector<int>      res_id_vec;
+    thrust::device_vector<double>   res_lon_vec;
+    thrust::device_vector<double>   res_lat_vec;
+    thrust::device_vector<long>     res_time_vec;
+    thrust::device_vector<int>      res_state_vec;
+    thrust::device_vector<int>      res_speed_vec;
+    thrust::device_vector<int>      res_dir_vec;
+
 
 
     size_t size;                    // table size
 
-    comdb() 
+   /* comdb() 
     {
 	col_id_vec = {};
 	col_lat_vec = {};
@@ -34,7 +51,7 @@ struct comdb
 	col_lon_vec = {};
 	res_lat_vec = {};
 	res_id_vec = {};
-    }
+    }*/
 
     /*void init(size_t _size) 
     {
@@ -52,25 +69,27 @@ struct comdb
 	res_lat_vec = res_host;
     }
 	*/
-    int select_all_id(int *result);    							// get all trajectory ids
+    /* get all trajectory ids*/
+    int select_all_id(int *result);    		
 
-    void select_by_id(int id);            		     	     		// query latitude by id
+    /* query by id */
+    void select_by_id(int id);            		     	     		
 
-    int select_by_time(const char *start, const char *end);			// query latitude by a time interval
+    /* query by time interval */
+    int select_by_time(const char *start, const char *end);
     
-	
+	/* query id by a spatial window*/
     int select_by_space(double top_left_lon, double top_left_lat, 
-		double bottom_right_lon, double bottom_right_lat);		// query id by a given space window
+		double bottom_right_lon, double bottom_right_lat);		
+    
+    /* query id by a space-time window */
     int select_by_space_time(double top_left_lon, double top_left_lat,
-		double bottom_right_lon, double bottom_right_lat,		// query id by a given space-time window
+		double bottom_right_lon, double bottom_right_lat,		
 		long start, long end);
 
-    double* select_range_location();						// query range of longitude and latitude
 };
 
-int load_data(const char* filename, comdb &db);  	             // load data from file
-
-
+/* GPU code for select_by_id */
 struct id_equal
 {
     int id;
@@ -108,6 +127,7 @@ struct id_equal
     }
 };
 
+/* kernel for select_all_id */
 struct get_all_id
 {
 	int *all_id, *in_data;
@@ -117,8 +137,11 @@ struct get_all_id
 	__host__ __device__
 	void operator() (const int& i)
 	{
+        /* keep the first id */
 		if (i == 0) all_id[i] = in_data[i];
-		if (i > 0 && in_data[i] > 0 && in_data[i] != in_data[i-1])
+
+        /* continuous id not equal */
+        if (i > 0 && in_data[i] > 0 && in_data[i] != in_data[i-1])
 		{
 			all_id[i] = in_data[i];		
 		}
@@ -129,6 +152,7 @@ struct get_all_id
 	}
 };
 
+/* kernel for select_by_time */
 struct time_between
 {
 	long start, end;
@@ -176,6 +200,8 @@ struct time_between
 
 };
 
+
+/* kernel for select_by_space */
 struct space_between
 {
 	double left_lon, left_lat, right_lon, right_lat;
@@ -200,14 +226,17 @@ struct space_between
 	}
 };
 
+/* kernel for select_by_space_time */
 struct space_time_between
 {
 	double left_lon, left_lat, right_lon, right_lat;
 	long start, end;
 
 	__host__ __device__
-	space_time_between(double _lf_lon, double _lf_lat, double _rt_lon, double _rt_lat, long _start, long _end):
-		left_lon(_lf_lon), left_lat(_lf_lat), right_lon(_rt_lon), right_lat(_rt_lat), start(_start), end(_end) {}
+	space_time_between(double _lf_lon, double _lf_lat, double _rt_lon, 
+            double _rt_lat, long _start, long _end):
+		left_lon(_lf_lon), left_lat(_lf_lat), right_lon(_rt_lon), 
+            right_lat(_rt_lat), start(_start), end(_end) {}
 
 	template <typename Tuple>
 	__host__ __device__
@@ -219,12 +248,14 @@ struct space_time_between
 		long id = thrust::get<3>(t);
 		
 
-		if (lon < right_lon && lon > left_lon && lat > right_lat && lat < left_lat && time > start && time < end)
+		if (lon < right_lon && lon > left_lon && lat > right_lat 
+                    && lat < left_lat && time > start && time < end)
 			thrust::get<4>(t) = id;
 		else 
 			thrust::get<4>(t) = -1;
 	}
 };
+
 
 struct points_to_traj
 {

@@ -47,29 +47,23 @@ struct line_interpolate
 	__host__ __device__
 	void operator() (const unsigned int& i)
 	{
-		out_tid_data[5*i] = tid_data[i];
-		out_lon_data[5*i] = lon_data[i];
-		out_lat_data[5*i] = lat_data[i];
-		out_ts_data[5*i] = ts_data[i];
-
-		//if (lat_data[i] < 10) printf("line 43 ------------ %lf\n", lat_data[i]);
+		//printf("line 43 ------------ %lf\n", intervals);
 		if (tid_data[i] == tid_data[i+1])
 		{
 			long intervals = ts_data[i+1] - ts_data[i];
 			
-			//printf("----------time intervals--------%ld\n", intervals);
 			// if missing data last longer than 5*300s, do nothing
 			if (intervals > TIME_INTERVAL && intervals < 5*TIME_INTERVAL) 
 				execute(tid_data[i+1], lon_data[i+1], lat_data[i+1], ts_data[i+1], 
 						lon_data[i], lat_data[i], ts_data[i], out_tid_data, out_lon_data, out_lat_data, out_ts_data, i);
 		}
-		/*else // if < 300s, add a new point, if > 5*300 or == 300, miss the middle poionts
+		else // if < 300s, add a new point, if > 5*300 or == 300, miss the middle poionts
 		{
 			out_tid_data[5*i] = tid_data[i];
 			out_lon_data[5*i] = lon_data[i];
 			out_lat_data[5*i] = lat_data[i];
 			out_ts_data[5*i] = ts_data[i];
-		}*/ 
+		} 
 	}
 
 	__host__ __device__
@@ -95,16 +89,16 @@ struct line_interpolate
 		//cudaMalloc((void**)res_ts, num*sizeof(long));
 
 		// add points
-		for (int k = 1; k < num+1; k++)
+		for (int k = 0; k < num+1; k++)
 		{
 			res_tid[5*tix+k] = tid;
 			res_lon[5*tix+k] = min_lon + k*step_lon;
 			//printf("line 90 ----------- %lf\n", res_lon[5*tix+k]);
 			res_lat[5*tix+k] = max_lat - k*step_lat;
 			res_ts[5*tix+k] = min_ts + k*TIME_INTERVAL;
-			//if (res_lat[5*tix+k] < 10)
-			//	printf("line 107 ----------- %lf\n", res_lat[5*tix+k]);
-			
+			/*if (last_ts == 1201962120)
+				printf("line 107 ----------- %d\n", 5*tix+k);
+			*/
 		}
 		
 		// record the last point, preparing for the next interpolation

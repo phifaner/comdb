@@ -7,24 +7,15 @@
 
 #include "comdb.h"
 #include "parser.h"
+#include "hash_table.h"
 
 #include <sys/mman.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
 
-/*extern thrust::device_vector<int> col_id_vec;			// object id
-	
-extern thrust::device_vector<double> col_lat_vec;		// latitude
 
-extern thrust::device_vector<double> col_lon_vec;		// longitude
-
-extern thrust::device_vector<long int> col_time_vec;		// time
-
-extern thrust::device_vector<double> res_lat_vec;		// query result of latitude
-
-extern thrust::device_vector<int> res_id_vec;			// query result of id
-*/
+/* this function only used for load taxi data of beijing */
 int load_data(const char* filename, comdb &db)
 {
     // get file size and prepare to map file
@@ -157,27 +148,31 @@ int load_data(const char* filename, comdb &db)
 
     // parse id column
     index_cnt[0] = 6;
-    gpu_atoi atoi_ff((const char*) thrust::raw_pointer_cast(id_vec.data()), (int*)thrust::raw_pointer_cast(_id_vec.data()),
-			thrust::raw_pointer_cast(index_cnt.data()));
+    gpu_atoi atoi_ff((const char*) thrust::raw_pointer_cast(id_vec.data()), 
+            (int*)thrust::raw_pointer_cast(_id_vec.data()),
+			    thrust::raw_pointer_cast(index_cnt.data()));
     thrust::for_each(begin, begin+cnt, atoi_ff);
 
 
     // parse latitude column
     index_cnt[0] = 8;
-    gpu_atof atof_ff_lat((const char*)thrust::raw_pointer_cast(latitude_vec.data()), (double*)thrust::raw_pointer_cast(_lat_vec.data()),
-			thrust::raw_pointer_cast(index_cnt.data()));
+    gpu_atof atof_ff_lat((const char*)thrust::raw_pointer_cast(latitude_vec.data()), 
+            (double*)thrust::raw_pointer_cast(_lat_vec.data()),
+			    thrust::raw_pointer_cast(index_cnt.data()));
     thrust::for_each(begin, begin+cnt, atof_ff_lat);
 
     // parse longitude column
     index_cnt[0] = 9;
-    gpu_atof atof_ff_lon((const char*)thrust::raw_pointer_cast(longitude_vec.data()), (double*)thrust::raw_pointer_cast(_lon_vec.data()),
-			thrust::raw_pointer_cast(index_cnt.data()));
+    gpu_atof atof_ff_lon((const char*)thrust::raw_pointer_cast(longitude_vec.data()),
+            (double*)thrust::raw_pointer_cast(_lon_vec.data()),
+			    thrust::raw_pointer_cast(index_cnt.data()));
     thrust::for_each(begin, begin+cnt, atof_ff_lon);
 
     // parse time column
     index_cnt[0] = 19;
-    gpu_date date_ff((const char*)thrust::raw_pointer_cast(time_vec.data()), (long int*)thrust::raw_pointer_cast(_time_vec.data()),
-			thrust::raw_pointer_cast(index_cnt.data()));
+    gpu_date date_ff((const char*)thrust::raw_pointer_cast(time_vec.data()),
+            (long int*)thrust::raw_pointer_cast(_time_vec.data()),
+			    thrust::raw_pointer_cast(index_cnt.data()));
     thrust::for_each(begin, begin+cnt, date_ff);
 
     // add new column values in containers
@@ -204,13 +199,13 @@ void comdb::select_by_id(int id)
     res_lon_vec.resize(_size);
     res_time_vec.resize(_size);
 
-        //std::cout << "____-------__________________"  << std::endl; 	
-
     thrust::for_each(
             thrust::make_zip_iterator(thrust::make_tuple(col_id_vec.begin(), col_lat_vec.begin(),
-		col_lon_vec.begin(), col_time_vec.begin(),  res_id_vec.begin(), res_lat_vec.begin(), res_lon_vec.begin(), res_time_vec.begin())),
+		        col_lon_vec.begin(), col_time_vec.begin(),  res_id_vec.begin(), res_lat_vec.begin(), 
+                    res_lon_vec.begin(), res_time_vec.begin())),
             thrust::make_zip_iterator(thrust::make_tuple(col_id_vec.end(), col_lat_vec.end(), 
-		col_lon_vec.end(), col_time_vec.end(), res_id_vec.end(), res_lat_vec.end(), res_lon_vec.end(), res_time_vec.end())),
+		        col_lon_vec.end(), col_time_vec.end(), res_id_vec.end(), res_lat_vec.end(), 
+                    res_lon_vec.end(), res_time_vec.end())),
             ieq);
 
  //	thrust::copy(res_id_vec.begin(), res_id_vec.end(), std::ostream_iterator<int>(std::cout, ","));

@@ -9,12 +9,11 @@
 #HDFS_FLAGS=-DFILESYSTEM_HDFS=1 
 #HDFS_LIBS=-lhdfs
 #HDFS_OBJ=filesystem_hdfs.o
-
+WARNINGS=-Wno-deprecated-gpu-targets
+CUDA_LIBS = -lcudadevrt
 #cflags
 #CFLAGS=--machine 64 -O2 -g -G -std=c++11 --expt-extended-lambda --compiler-options '-fPIC' -I ../deps/ -I ../include/ $(REDIS_FLAGS) $(HDFS_FLAGS)
-CFLAGS=--machine 64 -O2 -g -std=c++11 --expt-extended-lambda --compiler-options '-fPIC' -I ../deps/ -I /usr/local/include $(REDIS_FLAGS) $(HDFS_FLAGS)
-
-BOOST_LIB= /usr/local/lib
+CFLAGS=--machine 64 -g -std=c++11 $(WARNINGS) -rdc=true --expt-extended-lambda --compiler-options '-fPIC' -I ../deps/ -I ../include/ $(REDIS_FLAGS) $(HDFS_FLAGS)
 
 #compute compatibility (https://developer.nvidia.com/cuda-gpus)
 #GENCODE_SM30	:= -gencode arch=compute_30,code=sm_30
@@ -23,8 +22,8 @@ GENCODE_SM52	:= -gencode arch=compute_52,code=sm_52
 GENCODE_FLAGS	:= $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM52)
 
 #comdb binary
-comdbs : main.o comdb.o project.o random.o libgenie.a
-	nvcc  -L "/usr/local/lib" -L . $^ $(REDIS_LIBS) $(HDFS_LIBS) -lgenie -lboost_serialization -o $@ 
+comdbs : main.o comdb.o parser.o quadtree.o dbscan.o file_index.o hash_table.o 
+	nvcc  -L . $^ $(REDIS_LIBS) $(CUDA_LIBS) $(WARNINGS) -o $@ 
 
 #static library
 #libalenka.a : alenka.o callbacks.o common.o compress.o cudaset.o datadict_local.o \
@@ -32,9 +31,6 @@ comdbs : main.o comdb.o project.o random.o libgenie.a
 		 operators.o select.o sorts.o strings_join.o strings_sort_host.o strings_sort_device.o zone_map.o	 
 #	ar rcs $@ $^
 
-libgenie.a : interface.o random.o heap_count.o inv_list.o inv_table.o knn.o match.o query.o genie_errors.o timing.o logger.o 
-	ar rcs $@ $^
-	
 #shared library
 #libalenka.so : alenka.o callbacks.o common.o compress.o cudaset.o datadict_local.o \
 		 $(REDIS_OBJ) $(HDFS_OBJ) filesystem_local.o filter.o global.o merge.o murmurhash2_64.o \
@@ -43,38 +39,30 @@ libgenie.a : interface.o random.o heap_count.o inv_list.o inv_table.o knn.o matc
 
 #alenka objects
 nvcc = nvcc $(CFLAGS) $(GENCODE_FLAGS)
-main.o : main.cu swindow.h GPUGenie/src/GPUGenie.h 
-	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
-comdb.o : comdb.cu
-	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
+main.o : main.cu  
+	$(nvcc) -c $< -o $@
+comdb.o : comdb.cu comdb.h
+	$(nvcc) -c $< -o $@ 
+parser.o : wzparser.cu 
+	$(nvcc) -c $< -o $@ 
+dbscan.o : dbscan.cu
+	$(nvcc) -c $< -o $@
+#quadtree.o : quadtree.cu
+s2_index.o : s2_index.cpp
+	g++ -c $< -o $@
 #heatmap.o : heatmap.cu
 #	$(nvcc) -c $< -o $@
 #swindow.o : swindow.cu swindow.h
 #	$(nvcc) -c $< -o $@
 project.o : project.cu Random.h
-	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
+	$(nvcc) -c $< -o $@
 random.o : Random.cpp Random.h
-	gcc -c $< -o $@ -IGPUGenie -IGPUGenie/src
-interface.o : GPUGenie/src/GPUGenie/interface.cu GPUGenie/src/GPUGenie/interface.h
-	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
-heap_count.o : GPUGenie/src/GPUGenie/heap_count.cu GPUGenie/src/GPUGenie/heap_count.h
-	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
-inv_list.o : GPUGenie/src/GPUGenie/inv_list.cu GPUGenie/src/GPUGenie/inv_list.h
-	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
-inv_table.o : GPUGenie/src/GPUGenie/inv_table.cu GPUGenie/src/GPUGenie/inv_table.h
-	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
-knn.o : GPUGenie/src/GPUGenie/knn.cu GPUGenie/src/GPUGenie/knn.h
-	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
-match.o : GPUGenie/src/GPUGenie/match.cu GPUGenie/src/GPUGenie/match.h
-	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
-query.o : GPUGenie/src/GPUGenie/query.cu GPUGenie/src/GPUGenie/query.h
-	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
-genie_errors.o : GPUGenie/src/GPUGenie/genie_errors.cu GPUGenie/src/GPUGenie/genie_errors.h
-	$(nvcc) -c $< -o $@ -IGPUGenie -IGPUGenie/src
-timing.o : GPUGenie/src/GPUGenie/Timing.cc GPUGenie/src/GPUGenie/Timing.h
-	gcc -c $< -o $@ -IGPUGenie -IGPUGenie/src
-logger.o : GPUGenie/src/GPUGenie/Logger.cc GPUGenie/src/GPUGenie/Logger.h
-	gcc -c $< -o $@ -IGPUGenie -IGPUGenie/src
+	gcc -c $< -o $@
+file_index.o : file_index.c file_index.h
+	g++ -c $< -o $@
+hash_table.o : hash_table.c hash_table.h
+	g++ -c $< -o $@
+ 
 #bison / flex generation
 #alenka.cu alenka.hu: alenka.ypp
 #	bison -d -o $@ $<

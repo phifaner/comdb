@@ -108,7 +108,7 @@ struct gpu_atof
 	{
 	    double pow10 = 10.0;
 	    p += 1;
-	    while (p<end&&*p>='0'&&*p<='9')
+	    while (p<end && *p>='0' && *p<='9')
 	    {
  		value += (*p-'0')/pow10;
 		pow10 *= 10.0;
@@ -143,12 +143,11 @@ struct gpu_atoi
 		const char *p;
 		int frac, sign, value, scale;
 		
-		//printf("+++++++++++len: %d, i: %d\n", len[0], i);		
 
 		p = source + len[0]*i;
 		const char *end = p + len[0];
 
-		while (*p == ' ' || *p == '\n' || *p == '\t')
+        while (*p == ' ' || *p == '\n' || *p == '\t')
 		{
 			p += 1;
 		}
@@ -174,8 +173,108 @@ struct gpu_atoi
 		scale = 1;
 		
 		dest[i] = sign * (frac ? (value/scale) : (value*scale));
+
+        //if (dest[i] != 101)
+//printf("+++++++++++ v: %d, i: %d\n", i, dest[i]);
 	}
 };
+
+struct gpu_atoul
+{
+	const char *source;
+	unsigned long *dest;
+	const unsigned int *len;
+
+	gpu_atoul(const char *_source, unsigned long *_dest, const unsigned int *_len):
+		source(_source), dest(_dest), len(_len) {}
+
+	template<typename T>
+	__host__ __device__
+	void operator() (const T &i)
+	{
+		const char *p;
+		unsigned long long value;
+		
+
+		p = source + len[0]*i;
+		const char *end = p + len[0];
+
+        while (*p == ' ' || *p == '\n' || *p == '\t')
+		{
+			p += 1;
+		}
+
+		/*sign = 1;
+		if (*p == '-')
+		{
+			sign = -1;
+			p += 1;
+		}
+		else if (*p == '+')
+		{
+			p += 1;
+		}*/
+		
+		for (value = 0; *p >= '0' && *p <= '9' && p < end; p += 1)
+		{
+			value = value * 10 + (*p - '0');
+		}
+		
+		dest[i] = value;
+
+	}
+};
+
+
+struct gpu_atoull
+{
+	const char *source;
+	unsigned long long *dest;
+	const unsigned int *len;
+
+	gpu_atoull(const char *_source, unsigned long long *_dest, const unsigned int *_len):
+		source(_source), dest(_dest), len(_len) {}
+
+	template<typename T>
+	__host__ __device__
+	void operator() (const T &i)
+	{
+		const char *p;
+		unsigned long long value;
+		
+
+		p = source + len[0]*i;
+		const char *end = p + len[0];
+
+        while (*p == ' ' || *p == '\n' || *p == '\t')
+		{
+			p += 1;
+		}
+
+		/*sign = 1;
+		if (*p == '-')
+		{
+			sign = -1;
+			p += 1;
+		}
+		else if (*p == '+')
+		{
+			p += 1;
+		}*/
+		
+		for (value = 0; *p >= '0' && *p <= '9' && p < end; p += 1)
+		{
+			value = value * 10 + (*p - '0');
+		}
+		
+		dest[i] = value;
+
+        //if (dest[i] != 101)
+//printf("+++++++++++ v: %d, i: %d\n", i, dest[i]);
+	}
+};
+
+
 
 // parse date format: YYYY-MM-DD hh:mm:ss
 // return a second value
@@ -291,8 +390,8 @@ struct gpu_date
 			from_year++;
 		}
 		
-		// evaluating time in second
-		acc = (year - 1970) * 365 * 24 * 3600 + (cnt+day-1) * 24 * 3600 + hour * 3600 + min * 60 + second;
+		// evaluating time in second, be careful of Time Zone - 8
+		acc = (year - 1970) * 365 * 24 * 3600 + (cnt+day-1) * 24 * 3600 + (hour-8) * 3600 + min * 60 + second;
 		int feb = ((year%4==0&&year%100!=0) || (year%400==0)) ? 29 * 24 * 3600 : 28 * 24 * 3600;
 
 		switch (month)
