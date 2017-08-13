@@ -73,8 +73,6 @@ struct CUDA_RTree_Node
 //int *d_edeges;
 //struct RTree_Rect *d_rects;
 
-
-
 void cuda_sort(RTree_Points *points);
 
 RTree_Leaf* cuda_create_leaves(RTree_Points *sorted);

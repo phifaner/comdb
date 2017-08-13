@@ -114,10 +114,12 @@ void HMix::hindex_create(H_Points points, unsigned level)
 
         // recycle memory
         //free(ts_array);
+
+        // if (last_id == 2)
+        //     printf("bitmap index: -------- %d\n", last_id);
+
         hmap.insert( make_pair(last_id, p_index) );
     }
-
-    // free(ts_array);
 
 }
 

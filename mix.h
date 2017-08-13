@@ -60,6 +60,10 @@ public:
 
     void set_hmap(map<int, H_Index> map) { hmap = map; }
 
+    // map<int, D_Index> get_dmap() { return dmap; }
+
+    // void set_dmap(map<int, D_Index> map) { dmap = map; }
+
     // map<int, H_Index> get_hmap_12() { return hmap_12; }
 
 private:
@@ -71,6 +75,7 @@ private:
     // store mix indexes
     // vector<H_Index *> hmix;
     map<int, H_Index> hmap;
+    // map<int, D_Index> dmap;
     // map<int, H_Index> hmap_12;
 };
 

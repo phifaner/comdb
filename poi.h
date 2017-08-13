@@ -49,9 +49,9 @@ struct cmp_str
 {
    bool operator() (char const *a,  char const *b)
    {
-        if (/*strcmp(a, b) == 0 &&*/ strcmp(a, "科教文化服务;传媒机构;出版社") == 0)
-            printf("a: %s, b: %s\n", a, b);
-      return strcmp(a, b) == 0;
+        if (strcmp(a, b) < 0 )
+          return true;
+        return strcmp(a, b) == 0;
    }
 };
 
@@ -60,7 +60,7 @@ struct cmp_str
 class POI_Data
 {
   public:
-    std::vector<POI> poi_vec;
+    std::map<const std::string, std::vector<POI> > poi_map;
     // std::map<const char*, std::vector<uint64>, cmp_str> s2_poi_map;
     std::map<const std::string, std::vector<uint64> > s2_poi_map;
 
@@ -69,5 +69,8 @@ class POI_Data
     void batch_transform(int l);
 
     std::vector<uint64> search(char *keyword, char *tp);
+
+    std::vector<POI> search_poi(char *keyword, char *tp);
+
 };
 #endif

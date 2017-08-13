@@ -1,3 +1,22 @@
+#include "comdb.h"
+
+struct DataLoader
+{
+	/* load multiple files by trajectory ids,
+	 * len: length of list
+	 */
+	int load_data_by_ids(const unsigned long * id_list, int len, comdb *db);
+
+	/* load only one file */
+	int load_data_wz(const char * filename, comdb * db);
+
+	/* load data of beijing taxi */
+	int load_data_bj(const char* filename, comdb &db);
+
+	/* get all files of a directory */
+	std::vector<char*> find_files( const char* folder );
+};
+
 struct is_break
 {
     __host__ __device__

@@ -79,7 +79,7 @@ HMix Movix::build_bitmap_index(const char *path)
     // thrust::sort_by_key( tid_vec.begin(), tid_vec.end(), 
     //     thrust::make_zip_iterator(thrust::make_tuple(ts_vec.begin(), cell_vec.begin())) );
  
-    //thrust::copy(tid_vec.begin(), tid_vec.end(), std::ostream_iterator<int>(std::cout, ","));
+    // thrust::copy(tid_vec.begin(), tid_vec.end(), std::ostream_iterator<int>(std::cout, ","));
 
     cudaMemcpy(points.X, 
             thrust::raw_pointer_cast(cell_vec.data()), 
@@ -99,6 +99,36 @@ HMix Movix::build_bitmap_index(const char *path)
 
     std::cout << "create indexes finished" << std::endl;
     return H;
+}
+
+void Movix::cuda_build_bitmap_index(const char *path)
+{
+    // read a trajectory path
+    Construct c;
+    int level = c.find_files(path);
+    char ** f_array = c.get_file_array();
+    int f_num = c.get_file_num();
+
+    // read each trajectory and then create index
+    for (int i = 0; i < f_num; ++i)
+    {
+        read_cell_points(f_array[i]);
+    }
+
+    // order points on GPU by tid
+    thrust::sort_by_key( tid_vec.begin(), tid_vec.end(), 
+        thrust::make_zip_iterator(thrust::make_tuple(ts_vec.begin(), cell_vec.begin())) );
+
+    // copy all trajectory points to Host
+    // H_Points points;
+    // points.X        = thrust::raw_pointer_cast(cell_vec.data());
+    // points.Y        = thrust::raw_pointer_cast(ts_vec.data());
+    // points.ID       = thrust::raw_pointer_cast(tid_vec.data());
+    // points.length   = length;
+
+// thrust::copy(tid_vec.begin(), tid_vec.end(), std::ostream_iterator<int>(std::cout, ","));
+
+    // return points;
 }
 
 int Movix::read_cell_points(char * filename)
@@ -234,20 +264,20 @@ int Movix::read_cell_points(char * filename)
             (unsigned long*)thrust::raw_pointer_cast(_ts_vec.data()),
             thrust::raw_pointer_cast(index_cnt.data()));
     thrust::for_each(begin, begin+cnt, atoul_ts);
-
-    //thrust::copy(_cell_vec.begin(), _cell_vec.end(), std::ostream_iterator<unsigned long long>(std::cout, ","));
     
     // copy new items into containers
     thrust::copy(_cell_vec.begin(),  _cell_vec.end(),   cell_vec.end() - cnt);
     thrust::copy(_ts_vec.begin(),   _ts_vec.end(),      ts_vec.end() - cnt);
     thrust::copy(_tid_vec.begin(),  _tid_vec.end(),     tid_vec.end() - cnt);
 
+    // thrust::copy(tid_vec.begin(), tid_vec.end(), std::ostream_iterator<unsigned long long>(std::cout, ","));
+
     return level;
 }
 
 unsigned long get_time_interval(uint64_t * cells, size_t len, std::map<uint64, unsigned long> map)
 {
-    unsigned long ts_min = -1, ts_max = 0;
+    unsigned long ts_min = 9999999999999999l, ts_max = 0;
 
     for (size_t i = 0; i < len; ++i)
     {
@@ -262,7 +292,7 @@ unsigned long get_time_interval(uint64_t * cells, size_t len, std::map<uint64, u
     }
 
     assert(ts_max != 0);
-    assert(ts_min != -1);
+    assert(ts_min != 9999999999999999l);
 
     return ts_max - ts_min;
 }
@@ -420,6 +450,7 @@ Movix::cost_by_types(HMix *H, std::vector<std::vector<uint64> > type_cells, std:
         // find in last bitmap indexes
         for (hit = last_map.begin(), hend = last_map.end(); hit != hend; ++hit)
         {
+
             for (pit = poi_vec.begin(), pend = poi_vec.end(); pit != pend; ++pit)
             {
                  // if trajectory passing by r
@@ -432,8 +463,7 @@ Movix::cost_by_types(HMix *H, std::vector<std::vector<uint64> > type_cells, std:
                     if (mit != hit->second.s_map.end())
                     {
                         unsigned long temp = mit->second;
-                        // if (abs(ts - temp) < 3 * 60 * 1000) // in 3 minutes  
-                        // {
+
                         std::map<int, std::vector<unsigned long> >::iterator cit = type_count_map.find(hit->first);
                         if (cit != type_count_map.end())
                             type_count_map[hit->first].push_back(temp);
@@ -445,11 +475,9 @@ Movix::cost_by_types(HMix *H, std::vector<std::vector<uint64> > type_cells, std:
                             
                         }
 
-                        temp_map.insert( *hit );
-                            
+                        temp_map.insert( *hit );                           
                         break;  // only pass one cell of one type
                     }
-                    //type_count++;
                 }
             }
 
@@ -463,6 +491,120 @@ Movix::cost_by_types(HMix *H, std::vector<std::vector<uint64> > type_cells, std:
 
     return type_count_map;
 }
+
+
+template< int NUM_THREADS_PER_BLOCK >
+__global__
+void kernel_check_type(
+        uint64          *   d_cells,                 // cells of trajectory
+        uint64          *   d_poi_cells,             // cells of pois of one type
+        Parameters          params,
+        unsigned long   *   d_ts,                   // timestamps     
+        unsigned long   *   times,                   // start and end time
+        int             *   count                    // overlapped cells
+    )
+{
+    // each thread represents one cell
+    int tid = blockIdx.x * NUM_THREADS_PER_BLOCK + threadIdx.x;
+
+    if (tid < params.num_cells)
+    {
+        uint64 cell_id = d_cells[tid];
+
+        // check if cell id overlap a poi cell
+        for (size_t k = 0; k < params.num_poi_cells; ++k)
+        {
+            // printf("---poi cell num: %lu, cell id: %llu\n", params.num_poi_cells, cell_id);
+            if (cell_id == d_poi_cells[k] && d_ts[tid] > times[0] && d_ts[tid] < times[1])    
+            {
+                count[tid]++;
+                break;
+            }
+        }
+    }
+}
+
+template< int NUM_THREADS_PER_BLOCK >
+__global__
+void kernel_count_cell_types(int *d_count, int *d_tid, int *d_result, Parameters params)
+{
+    int thid = blockIdx.x * NUM_THREADS_PER_BLOCK + threadIdx.x;
+
+    // if two consecutive tids are not equal, count all items with the same tid
+    if (thid < params.num_cells - 1 && d_tid[thid] != d_tid[thid+1])
+    { 
+        size_t amount = 0;
+
+        // printf("---%d, %d\n", d_tid[thid], d_tid[thid+1]);
+
+        for (size_t k = thid+1; d_tid[k] == d_tid[k+1]; ++k)
+        {   
+            if (d_count[k] > 0) {
+                amount += d_count[k];
+                
+            }
+        }
+
+        if (amount >= params.num_poi_types) d_result[thid] = d_tid[thid];
+    }
+}
+
+int *
+Movix::cuda_cost_by_types(std::vector<std::vector<uint64> > type_cells, std::vector<unsigned long> times)
+{
+    std::vector<std::vector<uint64> >::iterator vit, vend;
+
+    // suppose we have the max number of cells
+    size_t num_cells = length;
+    thrust::device_vector<int> d_count_vec(num_cells, 0);
+    thrust::device_vector<unsigned long> d_times = times;
+    thrust::device_vector<int> d_result_vec(num_cells, 0);
+
+    const int NUM_THREADS_PER_BLOCK = 512;
+
+    // for each type of pois, decide whether the bitmap of a trajectory overlaps a bitmap of pois
+    for (vit = type_cells.begin(), vend = type_cells.end(); vit != vend; ++vit)
+    {
+        thrust::device_vector<uint64> d_poi_vec = type_cells[1];//*vit;
+
+        // thrust::copy(d_poi_vec.begin(), d_poi_vec.end(), std::ostream_iterator<uint64>(std::cout, ","));
+
+        size_t num_poi_cells = d_poi_vec.size();
+
+        Parameters params( num_cells, num_poi_cells, type_cells.size());
+
+        kernel_check_type<NUM_THREADS_PER_BLOCK><<<num_cells/NUM_THREADS_PER_BLOCK, NUM_THREADS_PER_BLOCK>>>(
+            thrust::raw_pointer_cast(cell_vec.data()), 
+            thrust::raw_pointer_cast(d_poi_vec.data()), 
+            params,
+            thrust::raw_pointer_cast(ts_vec.data()),
+            thrust::raw_pointer_cast(d_times.data()),
+            thrust::raw_pointer_cast(d_count_vec.data())
+        );
+    }
+
+    // thrust::copy(d_count_vec.begin(), d_count_vec.end(), std::ostream_iterator<bool>(std::cout, ","));
+    // count each cell of a trajectoy, only leaving trajectories with number of overlapping >= type number 
+    Parameters params( num_cells, 0, type_cells.size() );
+    kernel_count_cell_types<NUM_THREADS_PER_BLOCK><<<num_cells/NUM_THREADS_PER_BLOCK, NUM_THREADS_PER_BLOCK>>>( 
+        thrust::raw_pointer_cast(d_count_vec.data()), 
+        thrust::raw_pointer_cast(tid_vec.data()),  
+        thrust::raw_pointer_cast(d_result_vec.data()),
+        params
+    );
+
+    // thrust::copy(tid_vec.begin(), tid_vec.end(), std::ostream_iterator<int>(std::cout, ","));
+
+    auto new_end = thrust::remove_if( d_result_vec.begin(), d_result_vec.end(), thrust::placeholders::_1 == 0);
+    // thrust::copy(d_result_vec.begin(), new_end, std::ostream_iterator<int>(std::cout, ","));
+
+    size_t len = new_end - d_result_vec.begin();
+    thrust::device_vector<int> final_tid_vec(len);
+    thrust::copy_n(d_result_vec.begin(), len, final_tid_vec.begin());
+
+    return thrust::raw_pointer_cast(final_tid_vec.data());
+}
+
 
 
 std::vector<int> Movix::search_RTree(
@@ -521,9 +663,9 @@ std::vector<int> Movix::search_RTree(
 }
 */
 
-size_t Movix::poi_search(HMix *H, HMix *LH, POI_Data *D, std::vector<S2_POI> P, std::vector<unsigned long> T, double v)
+std::vector<int> Movix::poi_search(HMix *H, HMix *LH, POI_Data *D, std::vector<S2_POI> P, std::vector<unsigned long> T, double v)
 {
-    size_t number = 0;
+    // size_t number = 0;
     std::vector<std::vector<uint64> > cells_vec;
     
     // search in poi, return cell id
@@ -562,7 +704,7 @@ size_t Movix::poi_search(HMix *H, HMix *LH, POI_Data *D, std::vector<S2_POI> P, 
 
     std::sort(T.begin(), T.end());
     unsigned long s = T[0], e = T[T.size()-1];
-    unsigned long V[2] = {s, e};
+    // unsigned long V[2] = {s, e};
     unsigned long span = e - s;
 
     // printf("s: %lu, e: %lu\n", s, e);
@@ -721,8 +863,8 @@ size_t Movix::poi_search(HMix *H, HMix *LH, POI_Data *D, std::vector<S2_POI> P, 
         //      } );
 
     //     // size_t idx = 0;
-        unsigned long ts_min = -1, ts_max = 0;
-        int last_tid = 0;
+        // unsigned long ts_min = -1, ts_max = 0;
+        // int last_tid = 0;
         for (tit = type_count_map.begin(), tend = type_count_map.end(); tit != tend; ++tit)
         {
             std::vector<unsigned long> time_vec = tit->second;
@@ -838,6 +980,6 @@ size_t Movix::poi_search(HMix *H, HMix *LH, POI_Data *D, std::vector<S2_POI> P, 
         // number = L.size();
     // }
 
-    return candidates.size();
+    return candidates;
 }
 

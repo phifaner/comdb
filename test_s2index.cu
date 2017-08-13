@@ -1,7 +1,11 @@
 #include "s2_index.h"
 #include "poi.h"
 #include "roaring/roaring.h"
+#include "comdb.h"
+#include "parser.h"
+
 #include <ctime>
+#include <thrust/device_vector.h>
 
 std::vector<S2_POI> set_poi()
 {
@@ -139,16 +143,16 @@ std::vector<S2_POI> set_poi()
     poi_vec.push_back(p8);
     poi_vec.push_back(p9);
     poi_vec.push_back(p10);
-    poi_vec.push_back(p11);
-    poi_vec.push_back(p12);
-    poi_vec.push_back(p13);
-    poi_vec.push_back(p14);
-    poi_vec.push_back(p15);
-    poi_vec.push_back(p16);
-    poi_vec.push_back(p17);
-    poi_vec.push_back(p18);
-    poi_vec.push_back(p19);
-    poi_vec.push_back(p20);
+    // poi_vec.push_back(p11);
+    // poi_vec.push_back(p12);
+    // poi_vec.push_back(p13);
+    // poi_vec.push_back(p14);
+    // poi_vec.push_back(p15);
+    // poi_vec.push_back(p16);
+    // poi_vec.push_back(p17);
+    // poi_vec.push_back(p18);
+    // poi_vec.push_back(p19);
+    // poi_vec.push_back(p20);
 
     return poi_vec;
 }
@@ -225,10 +229,11 @@ void test_poi_search()
 void test_multiple_poi_search()
 {
     POI_Data pd;
-    //pd.read_poi("test.csv");
+
+    // pd.read_poi("test.csv");
     pd.read_poi("beijing.csv");
 
-    pd.batch_transform(13);
+    pd.batch_transform(11);
 
 
     // char *tp_1 = "road";
@@ -249,7 +254,7 @@ void test_multiple_poi_search()
     //    printf("tid: %d\n", points[i]);
 
     Movix mx;
-    HMix hm = mx.build_bitmap_index("/home/wangfei/13_06_n");
+    HMix hm = mx.build_bitmap_index("/home/wangfei/11_06_n");
     // Movix mx_12;
     // HMix hm_12 = mx_12.build_bitmap_index("/home/wangfei/12_06_n");
     std::clock_t start;
@@ -270,13 +275,31 @@ void test_multiple_poi_search()
     // time_vec.push_back(1202342002l);
     //1202077000l
     //1202078000l
-    size_t count = mx.poi_search(&hm, NULL, &pd, poi_vec, time_vec, 60);
+    std::vector<int> count_vec = mx.poi_search(&hm, NULL, &pd, poi_vec, time_vec, 60);
 
     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
 
     std::cout<<"poi search cost: "<< duration <<'\n';
 
-     printf("-----count: %lu\n", count);
+    printf("-----count: %lu\n", count_vec.size());
+
+    // comdb db;
+    // DataLoader loader;
+    // std::vector<char*> files = loader.find_files("/home/wangfei/06");
+    // for (int i = 0; i < files.size(); i++)
+    // {
+    //     // printf("%s\n", files[i]);
+    //     loader.load_data_bj(files[i], db);
+    // }
+    // thrust::device_vector<int> d_id_vec(count_vec);
+
+    // // thrust::copy(d_id_vec.begin(), d_id_vec.end(), std::ostream_iterator<int>(std::cout, ","));
+
+    // thrust::device_vector<long> d_t_vec(2);
+    // d_t_vec[0] = 1202020000l;
+    // d_t_vec[1] = 1202291993l;
+
+    // db.select_by_id_array(thrust::raw_pointer_cast(d_id_vec.data()), count_vec.size(), thrust::raw_pointer_cast(d_t_vec.data()));
 
 }
 
@@ -495,6 +518,54 @@ void test_cost_by_types()
         // std::cout << "count number: " << count_vec.size() << std::endl;
 }
 
+void test_cuda_cost_by_types()
+{
+    std::clock_t start;
+    double duration;
+
+    POI_Data pd;
+    pd.read_poi("beijing.csv");
+
+    pd.batch_transform(12);
+    std::vector<S2_POI> poi_vec = set_poi();
+
+    start = std::clock();
+
+    Movix mx;
+    mx.cuda_build_bitmap_index("/home/wangfei/12_06_n");
+
+    duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+
+    std::cout<<"build bitmap index cost: "<< duration <<'\n';
+
+
+    std::vector<std::vector<uint64> > cells_vec;
+        std::vector<std::vector<uint64> > V;
+    
+    // search in poi, return cell id
+    for (int i = 0; i < poi_vec.size(); ++i)
+    {
+        std::vector<uint64> cid_vec = pd.search(poi_vec[i].keywords, poi_vec[i].type);
+
+        printf("---poi cell: %lu\n", cid_vec.size());
+
+        if (!cid_vec.empty())
+            cells_vec.push_back(cid_vec);
+    }
+
+    std::vector<unsigned long> time_vec;
+    time_vec.push_back(1202220000l);
+    time_vec.push_back(1202221800l); 
+
+    start = std::clock();
+    mx.cuda_cost_by_types(cells_vec, time_vec);
+
+    duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+
+    std::cout<<"search on level 11 cost: "<< duration <<'\n';
+
+}
+
 
 
 int main()
@@ -503,8 +574,9 @@ int main()
     //test_build_index();
     //test_search();
     //test_poi_search();
-    test_multiple_poi_search();
+    //test_multiple_poi_search();
     // test_build_bitmap_index();
     // test_cost_by_time();
     // test_cost_by_types();
+    test_cuda_cost_by_types();
 }

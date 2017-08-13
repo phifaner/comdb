@@ -54,6 +54,26 @@ void test_search()
     printf("vec size: %lu\n", vec.size());
     
 }
+
+void test_search_poi()
+{
+    POI_Data pd;
+    pd.read_poi("beijing.csv");
+
+    // pd.batch_transform(12);
+
+    //char *kw = "小西天";
+    //char *kw = "renmin university";
+    char *kw = "";
+    //char *tp = "购物服务;专卖店;音像店";
+    char *tp = "汽车服务;加油站;中国石化";
+    // char *tp = "科教文化服务;传媒机构;出版社";
+    std::vector<POI> vec = pd.search_poi(kw, tp);
+
+    printf("latitude: %lf\n", vec[0].latitude);
+    
+}
+
 #include <locale.h>
 #include <stdio.h>
 #include <wchar.h>
@@ -81,5 +101,5 @@ int main()
     //test_transform();
     //test_read_poi();
     // test_batch_transform();
-    test_search();
+    test_search_poi();
 }

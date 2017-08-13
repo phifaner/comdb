@@ -6,25 +6,22 @@
 #include "poi.h"
 #include "mix.h"
 
-class BoundingBox
+struct Parameters
 {
-    protected:
-        float x_min, y_min, x_max, y_max;
-       
-};
+    // number of cells of a trajectory
+    const size_t num_cells;
+    // number of poi cells.
+    const size_t num_poi_cells;    
+    // number of poi types
+    const size_t num_poi_types;
 
-class Cell
-{
-    protected:
-    
-        // s2 generated 64-bit id
-        long cell_id;
-        
-        // // cell bounding box
-         BoundingBox bbox;
-        
-         //
-        
+
+    // Constructor set to default values.
+    __host__ __device__ Parameters( size_t _num_cells, size_t _num_poi_cells, size_t _num_poi_types ) : 
+        num_cells(_num_cells), 
+        num_poi_cells(_num_poi_cells),
+        num_poi_types(_num_poi_types)
+    {}
 };
 
 
@@ -61,8 +58,6 @@ class Movix
         // temporal span of all data set
         long start, end;
         
-        // cells of the index
-        Cell *p_cell;
         
         // inverted list of the index
         Inv_list *p_inv_list;
@@ -95,12 +90,17 @@ class Movix
         
         // build bitmap index based on s2's level, path's name including the level
         HMix build_bitmap_index(const char *path);
+
+        void cuda_build_bitmap_index(const char *path);
         
         // cost estimation
         // 1. given a time interval and cells, estimate the number of result
         // 2. given a collection of cells and their covering areas 
         std::map<int, H_Index> cost_by_time(HMix *H, std::vector<std::vector<uint64> > V, unsigned long *T, double v);
         std::map<int, std::vector<unsigned long> >  cost_by_types(HMix *H, std::vector<std::vector<uint64> > type_cells, std::vector<unsigned long> times, std::vector<float> radius);
+
+        // return trajectory ids, which are on device
+        int * cuda_cost_by_types(std::vector<std::vector<uint64> > type_cells, std::vector<unsigned long> times);
         
         // search index
         // given several cell id and a time span
@@ -113,7 +113,7 @@ class Movix
         // return a list of trajectory id
         std::vector<int> poi_search_RTree(RTree *tree, POI_Data *D, std::vector<S2_POI> P, long s, long e);
 
-        size_t poi_search(HMix *H, HMix *LH, POI_Data *D, std::vector<S2_POI> P, std::vector<unsigned long> T, double v);
+        std::vector<int> poi_search(HMix *H, HMix *LH, POI_Data *D, std::vector<S2_POI> P, std::vector<unsigned long> T, double v);
         //get_extent(uint64 cell_id, )
 
     //private:

@@ -1,23 +1,11 @@
+#ifndef _COMDB_H
+#define _COMDB_H
+
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <thrust/copy.h>
 
 #include "trajectory.h"
-
-struct comdb;
-
-//size_t size;					 // table size
-//thrust::device_vector<float>    col_lat_vec;         // store trajectory column's values
-//thrust::device_vector<int>    	col_id_vec;          // store id values
-//thrust::device_vector<float>    res_lat_vec;     // store query result
-
-/* load multiple files by trajectory ids,
- * len: length of list
- */
-int load_data_by_ids(const unsigned long * id_list, int len, comdb *db);
-
-/* load only one file */
-int load_data(const char * filename, comdb * db);
 
 struct comdb
 {
@@ -43,37 +31,14 @@ struct comdb
 
     size_t size;                    // table size
 
-   /* comdb() 
-    {
-	col_id_vec = {};
-	col_lat_vec = {};
-	col_time_vec = {};
-	col_lon_vec = {};
-	res_lat_vec = {};
-	res_id_vec = {};
-    }*/
-
-    /*void init(size_t _size) 
-    {
-	size = _size;
-
-	thrust::host_vector<float> lat_host(size);
-	col_lat_vec = lat_host;
-	
-	thrust::host_vector<int> id_host(size);
-	col_id_vec = id_host;
-
-	printf("..........comdb %d\n", col_id_vec.data());
-
-	thrust::host_vector<float> res_host(size);
-	res_lat_vec = res_host;
-    }
-	*/
     /* get all trajectory ids*/
     int select_all_id(int *result);    		
 
     /* query by id */
-    void select_by_id(int id);            		     	     		
+    void select_by_id(int id);   
+
+    /* query by multiple ids */
+    size_t select_by_id_array(int *id_array, unsigned long len, long *t);      		     	     		
 
     /* query by time interval */
     int select_by_time(const char *start, const char *end);
@@ -105,26 +70,73 @@ struct id_equal
     {
         int data = thrust::get<0>(t);
         double lat = thrust::get<1>(t);
-	double lon = thrust::get<2>(t);
-	long ts = thrust::get<3>(t);
+		double lon = thrust::get<2>(t);
+		long ts = thrust::get<3>(t);
         
-	if (data == id) 
-	{
-		thrust::get<4>(t) = id;
-		//printf("--------%ld\n", ts);
-		thrust::get<5>(t) = lat;
-		thrust::get<6>(t) = lon;
-		thrust::get<7>(t) = ts;
-	}
-        else   
-	{
-		thrust::get<4>(t) = -1;
-		thrust::get<5>(t) = -1;
-		thrust::get<6>(t) = -1;
-		thrust::get<7>(t) = 0;
-	}
+		if (data == id) 
+		{
+			thrust::get<4>(t) = id;
+			thrust::get<5>(t) = lat;
+			thrust::get<6>(t) = lon;
+			thrust::get<7>(t) = ts;
+		}
+	        else   
+		{
+			thrust::get<4>(t) = -1;
+			thrust::get<5>(t) = -1;
+			thrust::get<6>(t) = -1;
+			thrust::get<7>(t) = 0;
+		}
 
     }
+};
+
+
+/* kernel for select_by_id_array */
+struct kernel_id_array
+{
+	int *id_array;
+	unsigned long len;
+	// int id;
+	long *T;		// start time and end time
+
+	__host__ __device__
+	kernel_id_array(int *_ids, unsigned long _len, long *_t) : id_array(_ids), len(_len), T(_t) { }
+	// kernel_id_array(int _id, long *_t) : id(_id), T(_t) {}
+
+	template <typename Tuple>
+	__host__ __device__
+	void operator() (const Tuple& t)
+	{
+		int data = thrust::get<0>(t);
+        double lat = thrust::get<1>(t);
+		double lon = thrust::get<2>(t);
+		long ts = thrust::get<3>(t);
+
+
+		for (int i = 0; i < len; i++)	// why it doesn't work when using while loop ??
+		{
+			int id = id_array[i];
+
+			if ( data != id || !(ts > T[0] && ts < T[1]) )
+			{
+				thrust::get<4>(t) = -1;
+				thrust::get<5>(t) = -1;
+				thrust::get<6>(t) = -1;
+				thrust::get<7>(t) = 0;
+			}
+			else
+			{
+				thrust::get<4>(t) = id;
+				thrust::get<5>(t) = lat;
+				thrust::get<6>(t) = lon;
+				thrust::get<7>(t) = ts;
+
+				break;	// find the matched point, end the loop
+			}
+		}
+	}
+
 };
 
 /* kernel for select_all_id */
@@ -282,3 +294,4 @@ struct points_to_traj
 	}
 };
 
+#endif
