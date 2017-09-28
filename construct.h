@@ -93,12 +93,16 @@ class Construct
     Trajectory parse_file_msra( char *, size_t );
     
     Trajectory parse_file_wz( char *, size_t );
+
+    Trajectory parse_file_sing( char *mapped, size_t size );
     
     // count number of lines
     int count_line( char *, size_t );
  
     // parser timestamp
     long atots( char * );
+
+    long atots_sg( char *s );
 
     uint64 cell_id;
     

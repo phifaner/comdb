@@ -47,11 +47,12 @@ class S2_POI
 
 struct cmp_str
 {
+  
    bool operator() (char const *a,  char const *b)
    {
         if (strcmp(a, b) < 0 )
           return true;
-        return strcmp(a, b) == 0;
+      // return strcmp(a, b) == 0;
    }
 };
 
@@ -68,9 +69,13 @@ class POI_Data
 
     void batch_transform(int l);
 
-    std::vector<uint64> search(char *keyword, char *tp);
+    std::vector<uint64> search_s2_poi_by_type(char *tp);
 
-    std::vector<POI> search_poi(char *keyword, char *tp);
+    std::vector<POI> search_poi_by_type(char *tp);
+
+    std::map<const std::string, std::vector<POI> > get_all_poi_types();
+
+    POI search_poi_by_type_keyword(char *type, char *keyword);
 
 };
 #endif

@@ -549,7 +549,7 @@ void kernel_count_cell_types(int *d_count, int *d_tid, int *d_result, Parameters
     }
 }
 
-int *
+thrust::device_vector<int>
 Movix::cuda_cost_by_types(std::vector<std::vector<uint64> > type_cells, std::vector<unsigned long> times)
 {
     std::vector<std::vector<uint64> >::iterator vit, vend;
@@ -602,7 +602,7 @@ Movix::cuda_cost_by_types(std::vector<std::vector<uint64> > type_cells, std::vec
     thrust::device_vector<int> final_tid_vec(len);
     thrust::copy_n(d_result_vec.begin(), len, final_tid_vec.begin());
 
-    return thrust::raw_pointer_cast(final_tid_vec.data());
+    return final_tid_vec;
 }
 
 

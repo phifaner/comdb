@@ -100,7 +100,7 @@ class Movix
         std::map<int, std::vector<unsigned long> >  cost_by_types(HMix *H, std::vector<std::vector<uint64> > type_cells, std::vector<unsigned long> times, std::vector<float> radius);
 
         // return trajectory ids, which are on device
-        int * cuda_cost_by_types(std::vector<std::vector<uint64> > type_cells, std::vector<unsigned long> times);
+        thrust::device_vector<int> cuda_cost_by_types(std::vector<std::vector<uint64> > type_cells, std::vector<unsigned long> times);
         
         // search index
         // given several cell id and a time span

@@ -227,7 +227,7 @@ Trajectory Construct::load_file( const char * path )
     }
     
     // parse file to get trajectory
-    Trajectory traj = parse_file_msra( mapped, size );    
+    Trajectory traj = parse_file_sing( mapped, size );    
 
     if ( munmap(mapped, size) == -1 )
     {
@@ -372,6 +372,83 @@ Trajectory Construct::parse_file_msra( char *mapped, size_t size )
     return traj;   
 }
 
+/* parse files of Singapore taxi data */
+Trajectory Construct::parse_file_sing( char *mapped, size_t size ) 
+{
+
+    // get lines of the file
+    int num = count_line( mapped, size );
+
+    printf(" singarpore taxi line number: %d\n", num );
+
+    Trajectory traj(num);
+
+    char attrs[30];
+    char *head, *tail;
+    head = mapped;
+    tail = head;
+    int idx = 1;
+
+    // jump the header
+    while (*tail != '\n') tail++;
+
+    while ( idx < num )
+    {
+        // go to seperator ',' for tid
+        while ( *tail != ',' ) tail++;
+        tail++;
+        head = tail;
+        
+        // go to seperator ',' for time
+        while ( *tail != ',' ) tail++;
+        strncpy( attrs, head, tail-head );
+        attrs[tail-head+1] = '\0';
+        head = tail+1;
+        tail = head;
+
+        printf("time: %s, line: %d, ts: %ld\n", attrs, idx, atots_sg(attrs));
+        traj.add_ts( atots_sg(attrs), idx );
+
+        // copy tid between head atots_sgand tail
+        while ( *tail != ',' ) tail++;
+        strncpy( attrs, head, tail-head );
+        //printf("%ld\n", tail-head);
+        attrs[tail-head] = '\0';
+        head = tail+1;
+        tail = head;    // jump over ','
+        
+        // printf( "%s\n", attrs );
+        traj.set_id(atoi( attrs ));
+
+        // go to seperator ',' for longitude
+        while ( *tail != ',' ) tail++;
+        //printf("%ld\n", tail-head);
+        strncpy( attrs, head, tail-head );
+        attrs[tail-head+1] = '\0';
+        head = tail+1;
+        tail = head;
+        traj.add_lon( atof(attrs), idx );
+
+        // go to seperator ',' for latitude
+        while ( *tail != ',' ) tail++;
+        strncpy( attrs, head, tail-head );
+        attrs[tail-head+1] = '\0';
+        head = tail+1;
+        tail = head;
+ 
+        //printf("%f\t", atof(attrs));
+        traj.add_lat( atof(attrs), idx );
+
+        // go to '\n' for end of a line, ommitting the other attributes
+        while ( *tail != '\n' ) tail++;
+        head = tail+1;
+        tail = head;
+        idx ++;
+    }
+
+    return traj;   
+}
+
 int Construct::find_files( const char* folder )
 {
     DIR * dir;
@@ -380,19 +457,19 @@ int Construct::find_files( const char* folder )
 
     int level = 0;
 
-    // parse folder like "11_1100_n.txt" to get level
-    const char *l, *t;
-    if ( (l = strrchr(folder, '/')) && (t = strchr(folder, '_')) != NULL ) 
-    {
-        int n = t - l;   // level's length in string
-        char ss[5];
-        assert(n < 4);
-        strncpy(ss, l+1, n-1);
-        ss[n] = '\0';
-        level = atoi(ss);
+    // parse folder like "11_1100_n" to get level
+    // const char *l, *t;
+    // if ( (l = strrchr(folder, '/')) && (t = strchr(folder, '_')) != NULL ) 
+    // {
+    //     int n = t - l;   // level's length in string
+    //     char ss[5];
+    //     assert(n < 4);
+    //     strncpy(ss, l+1, n-1);
+    //     ss[n] = '\0';
+    //     level = atoi(ss);
 
-        printf("----------level: %d\n", level);
-    }
+    //     printf("----------level: %d\n", level);
+    // }
 
     if ( ( dir = opendir(folder) ) != NULL )
     {
@@ -579,7 +656,139 @@ long Construct::atots( char *s )
     }
 
     // evaluating time in second
-    acc = (year - 1970) * 365 * 24 * 3600 + (cnt+day-1) * 24 * 3600 + hour * 3600 + min * 60 + second;
+    acc = (year - 1970) * 365 * 24 * 3600 + (cnt+day-1) * 24 * 3600 + (hour-8) * 3600 + min * 60 + second;
+    int feb = ((year%4==0&&year%100!=0) || (year%400==0)) ? 29 * 24 * 3600 : 28 * 24 * 3600;
+    
+    switch (month)
+    {
+        case 1: break;
+        case 2: acc += 31 * 24 * 3600;      // value of January + 31 days
+            break;
+        case 3: acc += 31 * 24 * 3600 + feb;
+            break;
+        case 4: acc += 2 * 31 * 24 * 3600 + feb;
+            break;
+        case 5: acc += (2 * 31 + 30)  * 24 * 3600 + feb;
+            break;
+        case 6: acc += (3 * 31 + 30) * 24 * 3600 + feb;
+            break;
+        case 7: acc += (3 * 31 + 2 * 30) * 24 * 3600 + feb;
+            break;
+        case 8: acc += (4 * 31 + 2 * 30) * 24 * 3600 + feb;
+            break;
+        case 9: acc += (5 * 31 + 2 * 30) * 24 * 3600 + feb;
+            break;
+        case 10: acc += (5 * 31 + 3 * 30) * 24 * 3600 + feb;
+            break;
+        case 11: acc += (6 * 31 + 3 * 30) * 24 * 3600 + feb;
+            break;
+        case 12: acc += (6 * 31 + 4 * 30) * 24 * 3600 + feb;
+            break;
+        default: break;
+    }
+
+    return acc;
+}
+
+
+long Construct::atots_sg( char *s )
+{
+    int year, month, day, hour, min, second;
+    long int acc;
+    int z = 0, c;
+
+    for (day=0; z < 2; )
+    {
+        c = (unsigned char) *s++;
+        c -= '0';
+        day *= 10;
+        day += c;
+        z++;
+    }
+
+    // jump '/'
+    c = *s++;
+    z = 0;
+    
+    for (month = 0; z < 2; )
+    {
+        c = (unsigned char) *s++;
+        c -= '0';
+        month *=10;
+        month += c;
+        z++;
+    }
+
+    // jump '/'
+    c = *s++;
+    z = 0;
+    
+    for ( year = 0; z < 4; )
+    {
+        c = (unsigned char) *s++;
+
+        if ( c != '-')
+        {
+            c-= '0';
+            year *= 10;
+            year += c;
+        }
+        z++;
+    }
+
+    // jump ' '
+    c = *s++;
+    z = 0;
+
+    for (hour = 0; z < 2; )
+    {
+        c = (unsigned char) *s++;
+        c -= '0';
+        hour *= 10;
+        hour += c;
+        z++;
+    }
+
+    // jump ':'
+    c = *s++;
+    z = 0;
+
+    for (min = 0; z < 2; )
+    {
+        c = (unsigned char) *s++;
+        c -= '0';
+        min *= 10;
+        min += c;
+        z++;
+    }   
+
+    // jump ':'
+    c = *s++;
+    z = 0;
+
+    for (second = 0; z < 2; )
+    {
+        c = (unsigned char) *s++;
+        c -= '0';
+        second *= 10;
+        second += c;
+        z++;
+    }
+
+    // evaluating leap years from 1970 to the year
+    int cnt = 0;
+    int from_year = 1970;
+    int to_year = year;
+                            
+    while (from_year < to_year)
+    {
+        if ((from_year%4==0 && from_year%100!=0) || (from_year%400==0)) cnt++;
+                                                          
+        from_year++;
+    }
+
+    // evaluating time in second
+    acc = (year - 1970) * 365 * 24 * 3600 + (cnt+day-1) * 24 * 3600 + (hour-8) * 3600 + min * 60 + second;
     int feb = ((year%4==0&&year%100!=0) || (year%400==0)) ? 29 * 24 * 3600 : 28 * 24 * 3600;
     
     switch (month)

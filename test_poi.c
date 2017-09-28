@@ -36,7 +36,7 @@ void test_batch_transform()
     // printf("size: %lu\n", pd.s2_poi_vec.size());    
 }
 
-void test_search()
+void test_search_s2_poi_by_type()
 {
     POI_Data pd;
     pd.read_poi("beijing.csv");
@@ -49,13 +49,13 @@ void test_search()
     //char *tp = "购物服务;专卖店;音像店";
     char *tp = "风景名胜;风景名胜;风景名胜";
     // char *tp = "科教文化服务;传媒机构;出版社";
-    std::vector<uint64> vec = pd.search(kw, tp);
+    std::vector<uint64> vec = pd.search_s2_poi_by_type(tp);
 
     printf("vec size: %lu\n", vec.size());
     
 }
 
-void test_search_poi()
+void test_search_poi_by_type()
 {
     POI_Data pd;
     pd.read_poi("beijing.csv");
@@ -68,7 +68,7 @@ void test_search_poi()
     //char *tp = "购物服务;专卖店;音像店";
     char *tp = "汽车服务;加油站;中国石化";
     // char *tp = "科教文化服务;传媒机构;出版社";
-    std::vector<POI> vec = pd.search_poi(kw, tp);
+    std::vector<POI> vec = pd.search_poi_by_type(tp);
 
     printf("latitude: %lf\n", vec[0].latitude);
     

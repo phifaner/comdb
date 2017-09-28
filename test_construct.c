@@ -28,7 +28,8 @@ void test_assign_line()
 
 void test_assign()
 {
-    const char *file = "/home/wangfei/201401TRK/TRK20140101/C02/C02668.txt";
+    // const char *file = "/home/wangfei/201401TRK/TRK20140101/C02/C02668.txt";
+    const char *file = "/home/wangfei/project/selika_server/staxi/10000003.txt";
     
     Construct c;
     Trajectory p_traj = c.load_file( file );
@@ -62,7 +63,9 @@ void test_save_cells()
     // std::vector<Item> cells = c.assign(&traj, 11);
     // c.save_cells(cells, "/home/wangfei/06/443_n.txt");
     
-    const char *path = "/home/wangfei/06";
+    // const char *path = "/home/wangfei/06";
+
+    const char *path = "/home/wangfei/project/selika_server/staxi";
 
     Construct c;
     c.find_files(path);
@@ -70,6 +73,8 @@ void test_save_cells()
     
     char ** files = c.get_file_array();
     int num_file = c.get_file_num();
+
+    printf("number of files: %d\n", num_file);
 
     for (int i = 0; i != num_file; i++)
     {
@@ -79,7 +84,7 @@ void test_save_cells()
         
         char *ss = strtok(files[i], ".");
         //strncpy(ss, files[i], strlen(files[i])-5);
-        //printf("ss: %s\n", ss);
+        // printf("ss: %s\n", ss);
         sprintf( ss, "%s_n.txt", ss);
         printf("---ss: %s\n", ss);
         c.save_cells(cells, ss);
@@ -95,7 +100,7 @@ int main()
     //test_assign_line();
     //test_load_file();
     //test_find_files();
-    //test_assign();
+    // test_assign();
     test_save_cells();
     printf("end\n");
 }
